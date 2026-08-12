@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 def clean_columns (df):#清理无用的列
@@ -52,6 +53,7 @@ def clean_abnormal(df):#处理异常值
     df = df[(df['square'] >= 20) & (df['square'] <= 500)]
     df= df[(df['totalPrice']>50)&(df['totalPrice']<3000)]
     df = df[(df['livingRoom'] !=0)&(df['drawingRoom'] !=0) & (df['kitchen'] !=0) & (df['bathRoom'] !=0)]
+    df = df[df['trade_year'] > df['constructionTime']]
     return df
 
 def full_clean(df):#清洗所有数据
@@ -61,3 +63,11 @@ def full_clean(df):#清洗所有数据
     df=num_cols(df)
     df=clean_abnormal(df)
     return df
+def Split_the_dataset(filepath):
+    df = pd.read_csv(filepath)
+    X = df.drop('totalPrice', axis=1)
+    y = df['totalPrice']
+    X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_test,X_Verify,y_test, y_Verify = train_test_split(X_temp, y_temp, test_size=1/2, random_state=42)
+    return X_train,X_Verify,X_test,y_train,y_Verify,y_test
+
