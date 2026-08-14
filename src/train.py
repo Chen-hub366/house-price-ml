@@ -1,11 +1,15 @@
 import os
 import pandas as pd
 import numpy as np
+import xgboost as xgb
 from evaluate import evaluate_model
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.dummy import DummyRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from preprocess import Split_the_dataset
 #数据集切分
@@ -43,13 +47,41 @@ X_train.columns = X_train.columns.astype(str)#保证列名是字符串
 X_Verify.columns = X_Verify.columns.astype(str)
 X_test.columns = X_test.columns.astype(str)
 
-dummy_mean= DummyRegressor(strategy='mean')#均值回归模型
-dummy_mean.fit(X_train, y_train)
-y_pr_train = dummy_mean.predict(X_train)
-y_pr_Verify = dummy_mean.predict(X_Verify)
-y_pr_test= dummy_mean.predict(X_test)
+# dummy_mean= DummyRegressor(strategy='mean')#均值回归模型
+# dummy_mean.fit(X_train, y_train)
+# y_pred_train = dummy_mean.predict(X_train)
+# y_pred_Verify = dummy_mean.predict(X_Verify)
+# y_pred_test= dummy_mean.predict(X_test)
 
-evaluate_model(y_train, y_pr_train)#测试
-evaluate_model(y_Verify, y_pr_Verify)
-evaluate_model(y_test, y_pr_test)
+# lr_model = LinearRegression()#线性回归模型
+# lr_model.fit(X_train, y_train)
+# y_pred_train = lr_model.predict(X_train)
+# y_pred_Verify = lr_model.predict(X_Verify)
+# y_pred_test= lr_model.predict(X_test)
+
+# #随机森林回归模型
+# rf_model = RandomForestRegressor(n_estimators=200,random_state=42,n_jobs=-1)
+# rf_model.fit(X_train, y_train)
+# y_pred_train= rf_model.predict(X_train)
+# y_pred_Verify= rf_model.predict(X_Verify)
+# y_pred_test= rf_model.predict(X_test)
+
+# #XGBoost模型
+# XGBoost_model = xgb.XGBRegressor(n_estimators=1000,learning_rate=0.05,max_depth=6,subsample=0.8,colsample_bytree=0.8,random_state=42,n_jobs=-1)
+# XGBoost_model.fit( X_train, y_train,eval_set=[(X_Verify, y_Verify)], verbose=100)
+# y_pred_train= XGBoost_model.predict(X_train)
+# y_pred_Verify = XGBoost_model.predict(X_Verify)
+# y_pred_test = XGBoost_model.predict(X_test)
+
+# Gradient Boosting模型
+gb_model = GradientBoostingRegressor(n_estimators=500,learning_rate=0.05,max_depth=6,subsample=0.8,random_state=42)
+gb_model.fit(X_train, y_train)
+y_pred_train= gb_model.predict(X_train)
+y_pred_Verify= gb_model.predict(X_Verify)
+y_pred_test= gb_model.predict(X_test)
+
+#评估函数输出结果
+evaluate_model(y_train, y_pred_train)
+evaluate_model(y_Verify, y_pred_Verify)
+evaluate_model(y_test, y_pred_test)
 
