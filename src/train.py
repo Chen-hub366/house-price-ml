@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+import shap
+import matplotlib.pyplot as plt
 from evaluate import evaluate_model
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -36,8 +38,8 @@ X_Verify = pd.concat([X_Verify.drop(abel_cols, axis=1), ohe_verify_df], axis=1)
 ohe_test_df = pd.DataFrame(ohe.transform(X_test[abel_cols]),  index=X_test.index)
 X_test = pd.concat([X_test.drop(abel_cols, axis=1), ohe_test_df], axis=1)
 #数字变量标准化
-num_cols= ['square', 'livingRoom', 'drawingRoom', 'kitchen', 'bathRoom', 'ladderRatio', 'floor_sum', 'trade_year',
-           'trade_month', 'house_age', 'total_rooms', 'room_density', 'followers', 'communityAverage', 'Lng', 'Lat']
+num_cols= ['square', 'livingRoom', 'drawingRoom', 'kitchen', 'bathRoom', 'ladderRatio', 'floor_sum',
+           'house_age', 'total_rooms', 'room_density', 'communityAverage','followers', 'Lng', 'Lat']
 stdsc = StandardScaler()
 X_train[num_cols]= stdsc.fit_transform(X_train[num_cols])
 X_Verify[num_cols]= stdsc.transform(X_Verify[num_cols])
@@ -66,22 +68,28 @@ X_test.columns = X_test.columns.astype(str)
 # y_pred_Verify= rf_model.predict(X_Verify)
 # y_pred_test= rf_model.predict(X_test)
 
-# #XGBoost模型
-# XGBoost_model = xgb.XGBRegressor(n_estimators=1000,learning_rate=0.05,max_depth=6,subsample=0.8,colsample_bytree=0.8,random_state=42,n_jobs=-1)
-# XGBoost_model.fit( X_train, y_train,eval_set=[(X_Verify, y_Verify)], verbose=100)
-# y_pred_train= XGBoost_model.predict(X_train)
-# y_pred_Verify = XGBoost_model.predict(X_Verify)
-# y_pred_test = XGBoost_model.predict(X_test)
+# XGBoost模型
+XGBoost_model = xgb.XGBRegressor(n_estimators=1000,learning_rate=0.05,max_depth=6,subsample=0.8,colsample_bytree=0.8,random_state=42,n_jobs=-1)
+XGBoost_model.fit( X_train, y_train,eval_set=[(X_Verify, y_Verify)], verbose=100)
+y_pred_train= XGBoost_model.predict(X_train)
+y_pred_Verify = XGBoost_model.predict(X_Verify)
+y_pred_test = XGBoost_model.predict(X_test)
 
 # Gradient Boosting模型
-gb_model = GradientBoostingRegressor(n_estimators=500,learning_rate=0.05,max_depth=6,subsample=0.8,random_state=42)
-gb_model.fit(X_train, y_train)
-y_pred_train= gb_model.predict(X_train)
-y_pred_Verify= gb_model.predict(X_Verify)
-y_pred_test= gb_model.predict(X_test)
+# gb_model = GradientBoostingRegressor(n_estimators=500,learning_rate=0.05,max_depth=6,subsample=0.8,random_state=42)
+# gb_model.fit(X_train, y_train)
+# y_pred_train= gb_model.predict(X_train)
+# y_pred_Verify= gb_model.predict(X_Verify)
+# y_pred_test= gb_model.predict(X_test)
 
 #评估函数输出结果
 evaluate_model(y_train, y_pred_train)
 evaluate_model(y_Verify, y_pred_Verify)
 evaluate_model(y_test, y_pred_test)
-
+#shap图
+explainer = shap.TreeExplainer(XGBoost_model)
+shap_values_test = explainer.shap_values(X_test)
+plt.figure(figsize=(10, 8))
+shap.summary_plot(shap_values_test, X_test, plot_type="bar", show=False)
+plt.xlabel('Mean |SHAP value|')
+plt.show()
