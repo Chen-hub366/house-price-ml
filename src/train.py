@@ -2,12 +2,15 @@ import os
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+import optuna
 import shap
+import warnings
 import matplotlib.pyplot as plt
 from evaluate import evaluate_model
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression
@@ -87,9 +90,48 @@ evaluate_model(y_train, y_pred_train)
 evaluate_model(y_Verify, y_pred_Verify)
 evaluate_model(y_test, y_pred_test)
 #shap图
-explainer = shap.TreeExplainer(XGBoost_model)
-shap_values_test = explainer.shap_values(X_test)
-plt.figure(figsize=(10, 8))
-shap.summary_plot(shap_values_test, X_test, plot_type="bar", show=False)
-plt.xlabel('Mean |SHAP value|')
-plt.show()
+# explainer = shap.TreeExplainer(XGBoost_model)
+# shap_values_test = explainer.shap_values(X_test)
+# plt.figure(figsize=(10, 8))
+# shap.summary_plot(shap_values_test, X_test, plot_type="bar", show=False)
+# plt.xlabel('Mean |SHAP value|')
+# plt.show()
+#Optuna
+def objective(trial):
+    params = {
+        'n_estimators': trial.suggest_int('n_estimators', 300, 1000),
+        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1, log=True),
+        'max_depth': trial.suggest_int('max_depth', 3, 10),
+        'min_child_weight': trial.suggest_int('min_child_weight', 1, 10),
+        'subsample': trial.suggest_float('subsample', 0.6, 1.0),
+        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
+        'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 10.0, log=True),
+        'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 10.0, log=True),
+        'random_state': 42,
+        'n_jobs': -1
+    }
+    model = XGBRegressor(**params)
+    model.fit(
+        X_train, y_train,
+        eval_set=[(X_Verify, y_Verify)],
+        verbose=0
+    )
+    y_pred_Verify = model.predict(X_Verify)
+    mae = mean_absolute_error(y_Verify, y_pred_Verify)
+    return mae
+warnings.filterwarnings('ignore')
+study = optuna.create_study(direction='minimize')
+study.optimize(objective, n_trials=50)
+print(f"最佳验证集 MAE: {study.best_value:.2f}")
+print(f"最佳参数组合: {study.best_params}")
+best_params = study.best_params
+best_params['random_state'] = 42
+best_params['n_jobs'] = -1
+final_model = XGBRegressor(**best_params)
+final_model.fit(X_train, y_train)
+y_test_pred = final_model.predict(X_test)
+test_r2 = r2_score(y_test, y_test_pred)
+test_mae = mean_absolute_error(y_test, y_test_pred)
+print("\n--- 最终测试集表现 ---")
+print(f"R²: {test_r2:.4f}")
+print(f"MAE: {test_mae:.2f}")
